@@ -7,16 +7,20 @@ from sklearn.linear_model import LogisticRegression
 class LocalModel(nn.Module):
     def __init__(self, input_size=13, layer_sizes=[10,20,5], output_size=10):
         super(LocalModel, self).__init__()
+        # Set up array of all layer sizes
         layer_sizes = [input_size] + layer_sizes + [output_size]
         layers = []
+        # Architecture has a ReLU between every linear layer
         for i in range(len(layer_sizes) - 1):
             layers.append(nn.Linear(layer_sizes[i], layer_sizes[i+1]))
             if(i != len(layer_sizes) - 1):
                 layers.append(nn.ReLU())
+        # Use sequential to combine all the layers
         self.all_layers = nn.Sequential(*layers)
 
     def forward(self, x):
        layer_output = self.all_layers(x)
+       # Apply softmax to output of layers
        return(nn.functional.softmax(layer_output, dim=1))
 
     def process_input(self, train_data):
@@ -24,15 +28,17 @@ class LocalModel(nn.Module):
         train_labels = train_data['treatment'].values
         train_data = train_data.drop(['treatment','Unnamed: 0','response_type'], axis=1).values
         
-        # Convert data to PyTorch tensors
+        # Convert the numpy arrays to tensors
         train_data = torch.from_numpy(train_data).float()
         train_labels = torch.from_numpy(train_labels).long()
         return train_data, train_labels
 
     def train(self, train_data, train_labels, epochs=10000, learn=0.000001):
+        # Set up loss and optimizer
         loss_func = nn.CrossEntropyLoss()
         optimizer = torch.optim.SGD(self.parameters(), lr=learn)
 
+        # Train for the desired number of epochs
         for epoch in range(epochs):
             optimizer.zero_grad()
 
@@ -40,10 +46,11 @@ class LocalModel(nn.Module):
             outputs = self.forward(train_data)
             loss = loss_func(outputs, train_labels)
 
-            # Backward and optimize
+            # Backward pass
             loss.backward()
             optimizer.step()
 
+            # Print accuracy every 100 epochs
             if (epoch) % 100 == 0:
                 max_probs, predictions = torch.max(outputs, 1)
                 accuracy = sum([1 for i in range(len(predictions)) if predictions[i] == train_labels[i]])/len(outputs)
@@ -53,8 +60,13 @@ class LocalModel(nn.Module):
 
 
     def test(self, test_csv):
+        # Load train data
         test_data, test_labels = self.process_input(test_csv)
+
+        # Predict on test set
         outputs = self.forward(test_data)
+
+        # Print accuracy on train set
         max_probs, predictions = torch.max(outputs, 1)
         accuracy = sum([1 for i in range(len(predictions)) if predictions[i] == test_labels[i]])/len(outputs)
         print("accuracy: "+str(accuracy))
@@ -63,6 +75,8 @@ class LocalModel(nn.Module):
 
 def main():
     model = LocalModel()
+
+    # For testing the local model create an aggregate of the clinics that combines 10% of patients from each clinic
     df = pd.read_csv("~/Downloads/clinic_datasets_super_easy_mode-3/clinic_0.csv")
     df_sample = df.sample(n=int(len(df)/10))
 
@@ -75,11 +89,14 @@ def main():
     print("Training data shape")
     print(df_sample.shape)
 
-    #train_data, train_labels = model.process_input(df_sample)
+    # Train the models
+    train_data, train_labels = model.process_input(df_sample)
+    model.train(train_data, train_labels)
 
-    #model.train(train_data, train_labels)
-    #outputs = model.test("~/Downloads/clinic_datasets/clinic_1.csv")
+    # Run model on test set
+    outputs = model.test("~/Downloads/clinic_datasets/clinic_1.csv")
 
+    # Compare performance with that of a logistic regression
     y = df_sample['treatment'].values
     X = df_sample.drop(['treatment','Unnamed: 0','response_type'], axis=1).values
     print(df_sample.columns)
