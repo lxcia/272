@@ -47,7 +47,6 @@ def load_data(partition, num_partitions, data_path):
 
 # DONT NEED TO CALL BC ALREADY ST UP CSVS
 def load_partition(partition, num_partitions, data_path, batch_size=32):
-    """Load 1/10th of the training and test data to simulate a partition."""
     training_data, testing_data, val_data, num_examples = load_data(partition, num_partitions, data_path)
 
     n_train = int(num_examples["trainset"])

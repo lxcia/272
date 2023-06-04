@@ -20,6 +20,9 @@ class LocalModel(nn.Module):
         self.all_layers = nn.Sequential(*layers)
 
     def forward(self, x):
+        print(x)
+        x = x[:, :-2]
+        print(x)
         layer_output = self.all_layers(x)
         # Apply softmax to output of layers
         return (nn.functional.softmax(layer_output, dim=1))
@@ -56,15 +59,18 @@ class LocalModel(nn.Module):
         # Train for the desired number of epochs
         for epoch in range(epochs):
             optimizer.zero_grad()
-
             # Forward pass
             train_data = train_data.to(torch.float32)
-            print("training data: ")
-            print(train_data)
             outputs = self.forward(train_data)
+            train_labels = torch.argmax(train_labels, dim=0)
+            train_labels = train_labels.long()
+            outputs = outputs.double()
+            outputs = torch.tensor(outputs)
+            print(" OUTPUTS ")
             print(outputs)
-            print("outputs dtype")
-            print(outputs)
+            print("TRAIN LABELS")
+            print(train_labels)
+            train_labels = torch.tensor(train_labels)
             loss = loss_func(outputs, train_labels)
 
             # Backward pass

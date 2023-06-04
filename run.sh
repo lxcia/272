@@ -5,14 +5,9 @@ cd "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"/
 python server.py --fraction-fit 0.5 --min-available-clients 2 --num-rounds 2&
 sleep 15  # Sleep for 3s to give the server enough time to start
 
-for i in `seq 0 2`; do
+for i in `seq 0 1`; do
     echo "Starting client $i"
-     # Non-iid, different dataset sizes
-    # python client.py --partition=${i} --num-clients=12 --data-path data/clients_12_iid_False_error_prob_0.1_sizes_200to20000 --eval-dataset test&
-    # iid, same dataset sizes
-    # python client.py --partition=${i} --num-clients=12 --data-path data/clients_12_iid_True_error_prob_0.1_sizes_12500to12500 --eval-dataset test&
-    # Non-iid, same dataset sizes
-     python client.py --partition=1 --num-clients=15 --data-path data/clinic_${i} --eval-dataset test&
+     python client.py --partition=1 --num-clients=2 --data-path data/clinic_${i} --eval-dataset test&
 done
 
 # Enable CTRL+C to stop all background processes
