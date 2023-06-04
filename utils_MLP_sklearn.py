@@ -9,10 +9,12 @@ from torch.utils.data import Dataset
 from typing import Tuple, Union, List
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 
 XY = Tuple[np.ndarray, np.ndarray]
 Dataset = Tuple[XY, XY]
 LogRegParams = Union[XY, Tuple[np.ndarray]]
+MLPParams = Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
 XYList = List[XY]
 
 warnings.filterwarnings("ignore")
@@ -87,31 +89,42 @@ def load_partition(partition, num_partitions, data_path, batch_size=32):
 #     """Returns a model's parameters."""
 #     return [val.cpu().numpy() for _, val in model.state_dict().items()]
 
-def get_model_params(model : LogisticRegression) -> LogRegParams:
-    """Returns the paramters of a sklearn LogisticRegression model"""
-    if model.fit_intercept:
-        params = [model.coef_, model.intercept_]
-    else:
-        params = [model.coef_,]
+def get_model_params(model : MLPClassifier) -> MLPParams:
+    """Returns the paramters of a sklearn MLPClassifier model"""
+    # if model.fit_intercept:
+    #     params = [model.coefs_, model.intercepts_]
+    # else:
+    #     params = [model.coefs_,]
+    params = [model.coefs_[0], model.coefs_[1], model.intercepts_[0], model.intercepts_[1]]#, \
+            # model.coefs_[2], model.intercepts_[2], model.coefs_[3], model.intercepts_[3]]
     return params
 
-def set_initial_params(model : LogisticRegression):
+def set_initial_params(model : MLPClassifier) -> MLPClassifier:
     """
     Sets initial parameters as zeros
     """
     n_classes = 10
     n_features = 13
-    model.classes_ = np.array([i for i in range(10)])
-
-    model.coef_ = np.zeros((n_classes, n_features))
-    if model.fit_intercept:
-        model.intercept_ = np.zeros((n_classes,))
+    model.classes_ = np.arange(10)
+    model.coefs_ = []
+    model.intercepts_ = []
+    layers = [n_features, 24, n_classes]
+    for i in range(len(layers)-1):
+        model.coefs_.append(np.zeros((layers[i], layers[i+1])))
+        model.intercepts_ = np.zeros((layers[i+1],))
     return model
 
-def set_parameters(model : LogisticRegression, parameters: LogRegParams):
-    model.coef_ = parameters[0]
-    if model.fit_intercept:
-        model.intercept_ = parameters[1]
+def set_parameters(model : MLPClassifier, parameters: MLPParams):
+
+    model.coefs_[0] = parameters[0]
+    model.coefs_[1] = parameters[1]
+    
+    model.intercepts_[0] = parameters[2]
+    model.intercepts_[1] = parameters[3]
+    # for i in range(2):
+    #     model.coefs_[0] = parameters[0]
+    #     model.intercepts_[0] = parameters[1]
+
     return model
 # def difference_models_norm_2(model_1, model_2):
 #     """

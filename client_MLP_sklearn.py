@@ -15,10 +15,12 @@ import numpy as np
 from typing import Tuple, Union, List
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier 
 
 XY = Tuple[np.ndarray, np.ndarray]
 Dataset = Tuple[XY, XY]
 LogRegParams = Union[XY, Tuple[np.ndarray]]
+MLPParams = Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
 XYList = List[XY]
 
 
@@ -30,21 +32,23 @@ XYList = List[XY]
 # Define Flower client
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
-        self.training_data, self.testing_data, \
-            self.training_labels, self.testing_labels = \
+        self.training_data, self.testing_data, self.training_labels, self.testing_labels = \
             utils.load_partition(args.partition, args.num_clients, args.data_path, batch_size=args.batch_size)
         self.args = args
-        self.net = LogisticRegression(warm_start=True)#.fit(np.random.uniform(size=(10,13)), np.arange(10))
-        self.net = utils.set_initial_params(self.net)
+        # self.net = LogisticRegression().fit(np.random.uniform(size=(10,13)), np.arange(10))
+        self.net = MLPClassifier(hidden_layer_sizes=(24), warm_start=True).fit(np.random.uniform(size=(10,13)), np.arange(10)) #set initial params
+        #print(len(self.net.coefs_), len(self.net.intercepts_))
+        self.net.out_activation_ = 'softmax' 
+        # self.net = utils.set_initial_params(self.net)#, hidden_layer_sizes=(20))
         print("init")
 
-    def get_parameters(self, config=None): #type: ignore
+    def get_parameters(self, config=None) -> MLPParams: #type: ignore
         return utils.get_model_params(self.net)
 
     def fit(self, parameters, config): #, config={}):
         self.net = utils.set_parameters(self.net, parameters)
         self.net.fit(self.training_data, self.training_labels)
-        # print("yeehaw")
+        print("yeehaw")
         #print(utils.get_model_params(self.net).dtype)
         return utils.get_model_params(self.net), len(self.training_data), {}
         #def train(self, train_data, train_labels, batch_size=32, epochs=10000, learn=0.000001):
@@ -70,8 +74,8 @@ class FlowerClient(fl.client.NumPyClient):
         # print(loss.dtype)
         # print("MIDDLE")
         # print(len(self.testing_data))
-        print(f"ACC: {accuracy}")
-        # print(accuracy.dtype)
+        # print("ACC")
+        print(accuracy)
 
         return loss, len(self.testing_data), {"accuracy": accuracy}
 
@@ -197,7 +201,7 @@ def main():
     # REMOVED BASELINE CASE (commented above)
 
     client = FlowerClient(args)
-    #fl.client.start_numpy_client(server_address="0.0.0.0:8080", client=client)
+    # fl.client.start_numpy_client(server_address="0.0.0.0:8080", client=client)
     fl.client.start_numpy_client(server_address="localhost:8080", client=client)
 
 
