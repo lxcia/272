@@ -8,7 +8,7 @@ import torch
 import numpy as np
 from flwr.common import parameters_to_ndarrays
 
-from local_model import LocalModel
+from local_model_shit import LocalModel
 
 warnings.filterwarnings("ignore", category=UserWarning)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

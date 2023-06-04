@@ -8,7 +8,18 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 import argparse
-from local_model import LocalModel
+#from local_model import LocalModel
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import log_loss
+import numpy as np
+from typing import Tuple, Union, List
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+
+XY = Tuple[np.ndarray, np.ndarray]
+Dataset = Tuple[XY, XY]
+LogRegParams = Union[XY, Tuple[np.ndarray]]
+XYList = List[XY]
 
 
 # #############################################################################
@@ -19,48 +30,50 @@ from local_model import LocalModel
 # Define Flower client
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
-        self.training_data, self.val_data, self.testing_data, self.training_labels, self.val_labels, self.testing_labels = utils.load_partition(
-            args.partition, args.num_clients, args.data_path, batch_size=args.batch_size
-        )
+        self.training_data, self.val_data, self.testing_data, \
+            self.training_labels, self.val_labels, self.testing_labels = \
+            utils.load_partition(args.partition, args.num_clients, args.data_path, batch_size=args.batch_size)
         self.args = args
-        self.net = LocalModel()
+        self.net = LogisticRegression().fit(np.random.uniform(size=(10,13)), np.arange(10))
+        self.net = utils.set_initial_params(self.net)
         print("init")
 
-    # Config is never used in the below functions but is expected by the
-    # numpy client
-    def get_parameters(self, config={}):
-        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
+    def get_parameters(self): #type: ignore
+        return utils.get_model_params(self.net)
 
-    def set_parameters(self, parameters):
-        params_dict = zip(self.net.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        self.net.load_state_dict(state_dict, strict=True)
-
-    def fit(self, parameters, config={}):
-        print("fit")
-        self.set_parameters(parameters)
+    def fit(self, parameters, config): #, config={}):
+        utils.set_parameters(self.net, parameters)
+        self.net.fit(self.training_data, self.training_labels)
+        print("yeehaw")
+        #print(utils.get_model_params(self.net).dtype)
+        return utils.get_model_params(self.net), len(self.training_data), {}
         #def train(self, train_data, train_labels, batch_size=32, epochs=10000, learn=0.000001):
-        self.net.train(
-            self.training_data,
-            self.training_labels,
-            #batch_size=self.args.batch_size,
-            # TODO: CHECK THAT EPOCCHS AND LR ALIGN WITH DEFAULT
-            epochs=self.args.local_epochs,
-            learn=self.args.lr
-        )  # Adjust number of local updates b/t communication rounds
-        return self.get_parameters(config={}), len(self.training_data), {}
+        #self.net.train(
+            #self.training_data,
+            #self.training_labels,
+            #epochs=10000,
+            #learn=0.000001
+        #)  # Adjust number of local updates b/t communication rounds
+        #return self.get_parameters(config={}), len(self.training_data), {}
+        #return self.net.coef_
+
+
 
     def evaluate(self, parameters, config={}):
         # assert self.args.eval_dataset == 'test' or self.args.eval_dataset == 'val'
-        dataset = self.testing_data # if self.args.eval_dataset == 'test' else self.val_data
-        testing_labels = self.testing_labels
-        self.set_parameters(parameters)
-        # (self, test_csv):
-        loss, accuracy = self.net.test(dataset, testing_labels)
-        print("FLANKER")
-        print(loss, len(dataset), accuracy)
-        print("FLANKER")
-        return float(loss), len(dataset), {"accuracy": accuracy}
+         # if self.args.eval_dataset == 'test' else self.val_data
+        utils.set_parameters(self.net, parameters)
+        accuracy = self.net.score(self.testing_data, self.testing_labels)
+        print("here")
+        loss = log_loss(self.testing_labels, self.net.predict_proba(self.testing_data))
+        print("LOSS DTYPE")
+        print(loss.dtype)
+        print("MIDDLE")
+        print(len(self.testing_data))
+        print("ACC")
+        print(accuracy.dtype)
+
+        return loss, len(self.testing_data), {"accuracy": accuracy}
 
 
 #def run_baseline(args):
@@ -128,14 +141,14 @@ def main():
     parser.add_argument(
         "-lr",
         type=float,
-        default=0.0008,
+        default=0.0008, #change back to 0.0008
         required=False,
         help="Learning rate",
     )
     parser.add_argument(
         "--local-epochs",
         type=int,
-        default=3,
+        default=3, #change back to 3
         required=False,
         help="Number of local epochs",
     )

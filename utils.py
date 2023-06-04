@@ -6,6 +6,14 @@ import numpy
 from torch.utils.data import DataLoader
 import warnings
 from torch.utils.data import Dataset
+from typing import Tuple, Union, List
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+
+XY = Tuple[np.ndarray, np.ndarray]
+Dataset = Tuple[XY, XY]
+LogRegParams = Union[XY, Tuple[np.ndarray]]
+XYList = List[XY]
 
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -40,17 +48,14 @@ def load_data(partition, num_partitions, data_path):
     # val_data = numpy.loadtxt(val_data_path, delimiter=',', skiprows=1)
     training_data = pd.read_csv(train_data_path)
     training_data.treatment = training_data.treatment.values - 1
-    training_data.response_type = training_data.response_type.values - 1
     training_data = training_data.drop(columns=['response_type']).to_numpy()
         
     testing_data = pd.read_csv(test_data_path)
     testing_data.treatment = testing_data.treatment.values - 1
-    testing_data.response_type = testing_data.response_type.values - 1
     testing_data = testing_data.drop(columns=['response_type']).to_numpy()
         
     val_data = pd.read_csv(val_data_path)
     val_data.treatment = val_data.treatment.values - 1
-    val_data.response_type = val_data.response_type.values - 1
     val_data = val_data.drop(columns=['response_type']).to_numpy()
     print(f'Training data shape: {training_data.shape}')
 
@@ -71,33 +76,59 @@ def load_partition(partition, num_partitions, data_path, batch_size=32):
     n_train = int(num_examples["trainset"])
     print("n_train:", n_train)
 
-    training = torch.tensor(training_data[:, :-1], requires_grad=True)
-    testing = torch.tensor(testing_data[:, :-1], requires_grad=True) #drop last column
-    val = torch.tensor(val_data[:, :-1], requires_grad=True) #drop last column
-    training_labels = torch.tensor(training_data[:, -1])
-    val_labels = torch.tensor(val_data[:, -1])
-    testing_labels = torch.tensor(testing_data[:, -1])
+    training = training_data[:, :-1]
+    testing = testing_data[:, :-1]
+    val = val_data[:, :-1]
+
+    training_labels = training_data[:, -1]
+    val_labels = val_data[:, -1]
+    testing_labels = testing_data[:, -1]
     print(f'Training data shape after tensorification: {training.shape}')
     print("done load_partition")
 
     return training, val, testing, training_labels, val_labels, testing_labels
     # MAYBE FIX ABOVE LABEL GENEARATION LAST RETURN
+#
+# def get_model_params(model):
+#     """Returns a model's parameters."""
+#     return [val.cpu().numpy() for _, val in model.state_dict().items()]
 
-def get_model_params(model):
-    """Returns a model's parameters."""
-    return [val.cpu().numpy() for _, val in model.state_dict().items()]
+def get_model_params(model : LogisticRegression) -> LogRegParams:
+    """Returns the paramters of a sklearn LogisticRegression model"""
+    if model.fit_intercept:
+        params = [model.coef_, model.intercept_]
+    else:
+        params = [model.coef_,]
+    return params
 
-
-def difference_models_norm_2(model_1, model_2):
+def set_initial_params(model : LogisticRegression):
     """
-    Return the norm 2 difference between the two model parameters
-    Copied from https://epione.gitlabpages.inria.fr/flhd/federated_learning/FedAvg_FedProx_MNIST_iid_and_noniid.html
+    Sets initial parameters as zeros
     """
+    n_classes = 10
+    n_features = 13
+    model.classes_ = np.array([i for i in range(10)])
 
-    tensor_1 = list(model_1.parameters())
-    tensor_2 = list(model_2.parameters())
+    model.coef_ = np.zeros((n_classes, n_features))
+    if model.fit_intercept:
+        model.intercept_ = np.zeros((n_classes,))
+    return model
 
-    norm = sum([torch.sum((tensor_1[i] - tensor_2[i]) ** 2)
-                for i in range(len(tensor_1))])
-
-    return norm
+def set_parameters(model : LogisticRegression, parameters: LogRegParams):
+    model.coef_ = parameters[0]
+    if model.fit_intercept:
+        model.intercept_ = parameters[1]
+    return model
+# def difference_models_norm_2(model_1, model_2):
+#     """
+#     Return the norm 2 difference between the two model parameters
+#     Copied from https://epione.gitlabpages.inria.fr/flhd/federated_learning/FedAvg_FedProx_MNIST_iid_and_noniid.html
+#     """
+#
+#     tensor_1 = list(model_1.parameters())
+#     tensor_2 = list(model_2.parameters())
+#
+#     norm = sum([torch.sum((tensor_1[i] - tensor_2[i]) ** 2)
+#                 for i in range(len(tensor_1))])
+#
+#     return norm
