@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import pandas as pd
 import numpy as np
+import sklearn
 from sklearn.linear_model import LogisticRegression
 
 class LocalModel(nn.Module):
@@ -19,11 +20,27 @@ class LocalModel(nn.Module):
         self.all_layers = nn.Sequential(*layers)
 
     def forward(self, x):
-       layer_output = self.all_layers(x)
-       # Apply softmax to output of layers
-       return(nn.functional.softmax(layer_output, dim=1))
+        print(x)
+        x = x[:, :-2]
+        print(x)
+        layer_output = self.all_layers(x)
+        # Apply softmax to output of layers
+        return (nn.functional.softmax(layer_output, dim=1))
+
+    #def forward(self, x):
+        # Pass the input tensor through each of our operations
+        #for layer in self.all_layers:
+            #if isinstance(layer, nn.Linear):
+                # input = input.to(torch.float32)
+                #x = x.to(torch.float32)
+                #x = layer(x)
+            #else:
+                #x = x.to(torch.float32)
+                #x = layer(x)
+        #return nn.functional.softmax(x, dim=1)
 
     def process_input(self, train_data):
+        print("processing input")
         # Load the training data from CSV
         train_labels = train_data['treatment'].values.astype(np.float64)
         train_data = train_data.drop(['treatment','response_type'], axis=1).values.astype(np.float64)
@@ -33,8 +50,8 @@ class LocalModel(nn.Module):
         train_labels = torch.from_numpy(train_labels).long()
         return train_data, train_labels
 
-    def train(self, train_data, train_labels, epochs=10000, learn=0.001):
-        print(self.parameters())
+    def train(self, train_data, train_labels, epochs=10000, learn=0.000001):
+        print("training")
         # Set up loss and optimizer
         loss_func = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(self.parameters(), lr=learn)
@@ -42,9 +59,18 @@ class LocalModel(nn.Module):
         # Train for the desired number of epochs
         for epoch in range(epochs):
             optimizer.zero_grad()
-
             # Forward pass
+            train_data = train_data.to(torch.float32)
             outputs = self.forward(train_data)
+            train_labels = torch.argmax(train_labels, dim=0)
+            train_labels = train_labels.long()
+            outputs = outputs.double()
+            outputs = torch.tensor(outputs)
+            print(" OUTPUTS ")
+            print(outputs)
+            print("TRAIN LABELS")
+            print(train_labels)
+            train_labels = torch.tensor(train_labels)
             loss = loss_func(outputs, train_labels)
 
             # Backward pass
@@ -61,6 +87,7 @@ class LocalModel(nn.Module):
 
 
     def test(self, test_csv):
+        print("testing")
         # Load train data
         test_data, test_labels = self.process_input(test_csv)
 
