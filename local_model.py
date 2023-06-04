@@ -42,8 +42,8 @@ class LocalModel(nn.Module):
     def process_input(self, train_data):
         print("processing input")
         # Load the training data from CSV
-        train_labels = train_data['treatment'].values.astype(np.float64)
-        train_data = train_data.drop(['treatment','response_type'], axis=1).values.astype(np.float64)
+        train_labels = np.array(train_data['treatment'].values)
+        train_data = np.array(train_data.drop(['treatment','response_type'], axis=1).values)
         
         # Convert the numpy arrays to tensors
         train_data = torch.from_numpy(train_data).float()

@@ -1,5 +1,5 @@
 import os
-
+import pandas as pd
 import torch
 import random
 import numpy
@@ -34,9 +34,20 @@ def load_data(partition, num_partitions, data_path):
     test_data_path = os.path.join(data_path, "test.csv")
     val_data_path = os.path.join(data_path, "val.csv")
 
-    training_data = numpy.loadtxt(train_data_path, delimiter=',', skiprows=1)
-    testing_data = numpy.loadtxt(test_data_path, delimiter=',', skiprows=1)
-    val_data = numpy.loadtxt(val_data_path, delimiter=',', skiprows=1)
+    # training_data = numpy.loadtxt(train_data_path, delimiter=',', skiprows=1)
+    # testing_data = numpy.loadtxt(test_data_path, delimiter=',', skiprows=1)
+    # val_data = numpy.loadtxt(val_data_path, delimiter=',', skiprows=1)
+    training_data = pd.read_csv(train_data_path)
+    training_data.treatment = training_data.treatment.values - 1
+    training_data = numpy.array(training_data.drop(['response_type'], axis=1).values)
+        
+    testing_data = pd.read_csv(test_data_path)
+    testing_data.treatment = testing_data.treatment.values - 1
+    testing_data = numpy.array(testing_data.drop(['response_type'], axis=1).values)
+        
+    val_data = pd.read_csv(val_data_path)
+    val_data.treatment = val_data.treatment.values - 1
+    val_data = numpy.array(val_data.drop(['response_type'], axis=1).values)
 
     num_examples = {
         "trainset": len(training_data), "testset": len(testing_data), "valset": len(val_data)
