@@ -6,7 +6,7 @@ import sklearn
 from sklearn.linear_model import LogisticRegression
 
 class LocalModel(nn.Module):
-    def __init__(self, input_size=13, layer_sizes=[10,20,5], output_size=10):
+    def __init__(self, input_size=13, layer_sizes=[16,32,64,128,256,128,64,32,16], output_size=10):
         super(LocalModel, self).__init__()
         # Set up array of all layer sizes
         layer_sizes = [input_size] + layer_sizes + [output_size]
@@ -42,8 +42,8 @@ class LocalModel(nn.Module):
     def process_input(self, train_data):
         print("processing input")
         # Load the training data from CSV
-        train_labels = train_data['treatment'].values
-        train_data = train_data.drop(['treatment','Unnamed: 0','response_type'], axis=1).values
+        train_labels = train_data['treatment'].values.astype(np.float64)
+        train_data = train_data.drop(['treatment','response_type'], axis=1).values.astype(np.float64)
         
         # Convert the numpy arrays to tensors
         train_data = torch.from_numpy(train_data).float()
@@ -54,7 +54,7 @@ class LocalModel(nn.Module):
         print("training")
         # Set up loss and optimizer
         loss_func = nn.CrossEntropyLoss()
-        optimizer = torch.optim.SGD(self.parameters(), lr=learn)
+        optimizer = torch.optim.Adam(self.parameters(), lr=learn)
 
         # Train for the desired number of epochs
         for epoch in range(epochs):
@@ -139,15 +139,18 @@ class LocalModel(nn.Module):
 
 
 def main():
-    model = LocalModel()
+    model = LocalModel(layer_sizes=[1])
 
     # For testing the local model create an aggregate of the clinics that combines 10% of patients from each clinic
-    df = pd.read_csv("~/Downloads/clinic_datasets_super_easy_mode-3/clinic_0.csv")
+    df = pd.read_csv("~/Downloads/clinic_datasets_sophie_hormone_generation/clinic_0.csv")
+    df.treatment = df.treatment.values - 1
+    print(df.columns)
     df_sample = df.sample(n=int(len(df)/10))
 
     for i in range(1,15):
-        file_name = "~/Downloads/clinic_datasets_super_easy_mode-3/clinic_"+str(i)+".csv"
+        file_name = "~/Downloads/clinic_datasets_sophie_hormone_generation/clinic_"+str(i)+".csv"
         curr_df = pd.read_csv(file_name)
+        curr_df.treatment = curr_df.treatment.values - 1
         curr_df_sample = curr_df.sample(n=int(len(curr_df)/2))
         df_sample = pd.concat([df_sample, curr_df_sample])
 
@@ -159,11 +162,11 @@ def main():
     model.train(train_data, train_labels)
 
     # Run model on test set
-    outputs = model.test("~/Downloads/clinic_datasets/clinic_1.csv")
+    #outputs = model.test("~/Downloads/clinic_datasets/clinic_1.csv")
 
     # Compare performance with that of a logistic regression
     y = df_sample['treatment'].values
-    X = df_sample.drop(['treatment','Unnamed: 0','response_type'], axis=1).values
+    X = df_sample.drop(['treatment','response_type'], axis=1).values
     print(df_sample.columns)
     clf = LogisticRegression(random_state=0, max_iter = 100000, multi_class = 'multinomial').fit(X,y)
     print(clf.score(X,y))
