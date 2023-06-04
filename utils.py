@@ -53,6 +53,7 @@ def load_partition(partition, num_partitions, data_path, batch_size=32):
     print("n_train:", n_train)
 
     training = torch.tensor(training_data)
+    training = torch.tensor(training_data[:, :-1])
     testing = torch.tensor(testing_data)
     val = torch.tensor(val_data)
     labels = torch.tensor(training_data[:, -1])

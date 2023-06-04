@@ -62,7 +62,7 @@ class LocalModel(nn.Module):
             # Forward pass
             train_data = train_data.to(torch.float32)
             outputs = self.forward(train_data)
-            train_labels = torch.argmax(train_labels, dim=0)
+            #train_labels = torch.argmax(train_labels, dim=0)
             train_labels = train_labels.long()
             outputs = outputs.double()
             outputs = torch.tensor(outputs)
@@ -83,7 +83,44 @@ class LocalModel(nn.Module):
                 accuracy = sum([1 for i in range(len(predictions)) if predictions[i] == train_labels[i]])/len(outputs)
                 print("accuracy: "+str(accuracy))
 
-
+    # def train(self, train_data, train_labels, batch_size=32, epochs=10000, learn=0.000001):
+    #     print("training")
+    #     # Set up loss and optimizer
+    #     loss_func = nn.CrossEntropyLoss()
+    #     optimizer = torch.optim.SGD(self.parameters(), lr=learn)
+    #
+    #     # Determine the total number of samples
+    #     num_samples = len(train_data)
+    #
+    #     # Train for the desired number of epochs
+    #     for epoch in range(epochs):
+    #         optimizer.zero_grad()
+    #
+    #         # Iterate over batches
+    #         for i in range(0, num_samples, batch_size):
+    #             # Get the current batch
+    #             batch_data = train_data[i:i + batch_size]
+    #             batch_labels = train_labels[i:i + batch_size]
+    #
+    #             # Forward pass
+    #             batch_data = batch_data.to(torch.float32)
+    #             outputs = self.forward(batch_data)
+    #
+    #             batch_labels = torch.argmax(batch_labels, dim=0)  # Convert one-hot to class indices
+    #             batch_labels = batch_labels.long()  # Convert to torch.long
+    #             outputs = outputs.double()
+    #
+    #             loss = loss_func(outputs, batch_labels)
+    #
+    #             # Backward pass
+    #             loss.backward()
+    #             optimizer.step()
+    #
+    #         # Print accuracy every 100 epochs
+    #         if (epoch + 1) % 100 == 0:
+    #             _, predictions = torch.max(outputs, 1)
+    #             accuracy = (predictions == batch_labels).sum().item() / batch_labels.size(0)
+    #             print("Accuracy: {:.2f}%".format(accuracy * 100))
 
 
     def test(self, test_csv):

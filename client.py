@@ -39,10 +39,11 @@ class FlowerClient(fl.client.NumPyClient):
     def fit(self, parameters, config={}):
         print("fit")
         self.set_parameters(parameters)
-        #def train(self, train_data, train_labels, epochs=10000, learn=0.000001):
+        #def train(self, train_data, train_labels, batch_size=32, epochs=10000, learn=0.000001):
         self.net.train(
             self.training_data,
             self.labels,
+            #batch_size=self.args.batch_size,
             # TODO: CHECK THAT EPOCCHS AND LR ALIGN WITH DEFAULT
             epochs=self.args.local_epochs,
             learn=self.args.lr
