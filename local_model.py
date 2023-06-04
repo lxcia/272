@@ -6,7 +6,7 @@ import sklearn
 from sklearn.linear_model import LogisticRegression
 
 class LocalModel(nn.Module):
-    def __init__(self, input_size=13, layer_sizes=[16,32,64,128,256,128,64,32,16], output_size=10):
+    def __init__(self, input_size=13, layer_sizes=[32, 64, 32], output_size=10):
         super(LocalModel, self).__init__()
         # Set up array of all layer sizes
         layer_sizes = [input_size] + layer_sizes + [output_size]
@@ -18,11 +18,9 @@ class LocalModel(nn.Module):
                 layers.append(nn.ReLU())
         # Use sequential to combine all the layers
         self.all_layers = nn.Sequential(*layers)
+        self.loss_func = nn.CrossEntropyLoss()
 
     def forward(self, x):
-        print(x)
-        x = x[:, :-2]
-        print(x)
         layer_output = self.all_layers(x)
         # Apply softmax to output of layers
         return (nn.functional.softmax(layer_output, dim=1))
@@ -38,40 +36,41 @@ class LocalModel(nn.Module):
                 #x = x.to(torch.float32)
                 #x = layer(x)
         #return nn.functional.softmax(x, dim=1)
-
-    def process_input(self, train_data):
-        print("processing input")
-        # Load the training data from CSV
-        train_labels = np.array(train_data['treatment'].values)
-        train_data = np.array(train_data.drop(['treatment','response_type'], axis=1).values)
-        
-        # Convert the numpy arrays to tensors
-        train_data = torch.from_numpy(train_data).float()
-        train_labels = torch.from_numpy(train_labels).long()
-        return train_data, train_labels
+    #
+    # def process_input(self, train_data):
+    #     print("processing input")
+    #     # Load the training data from CSV
+    #     train_labels = np.array(train_data['treatment'].values)
+    #     train_data = np.array(train_data.drop(['treatment','response_type'], axis=1).values)
+    #
+    #     # Convert the numpy arrays to tensors
+    #     train_data = torch.from_numpy(train_data, requires_grad=True).float()
+    #     train_labels = torch.from_numpy(train_labels).long()
+    #     return train_data, train_labels
 
     def train(self, train_data, train_labels, epochs=10000, learn=0.000001):
         print("training")
         # Set up loss and optimizer
-        loss_func = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(self.parameters(), lr=learn)
 
         # Train for the desired number of epochs
         for epoch in range(epochs):
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             # Forward pass
             train_data = train_data.to(torch.float32)
+            train_data.requires_grad_() #please for the love of god work
             outputs = self.forward(train_data)
             #train_labels = torch.argmax(train_labels, dim=0)
             train_labels = train_labels.long()
             outputs = outputs.double()
             outputs = torch.tensor(outputs)
-            print(" OUTPUTS ")
-            print(outputs)
-            print("TRAIN LABELS")
-            print(train_labels)
+            #print(" OUTPUTS ")
+            #print(outputs)
+            #print("TRAIN LABELS")
+            #print(train_labels)
             train_labels = torch.tensor(train_labels)
-            loss = loss_func(outputs, train_labels)
+            loss = self.loss_func(outputs, train_labels)
+            loss.requires_grad_()
 
             # Backward pass
             loss.backward()
@@ -123,19 +122,25 @@ class LocalModel(nn.Module):
     #             print("Accuracy: {:.2f}%".format(accuracy * 100))
 
 
-    def test(self, test_csv):
+    def test(self, test_data, test_labels):
         print("testing")
-        # Load train data
-        test_data, test_labels = self.process_input(test_csv)
 
         # Predict on test set
+        test_data = test_data.to(torch.float32)
+        test_data.requires_grad_()  # please for the love of god work
         outputs = self.forward(test_data)
+        max_probs, predictions = torch.max(outputs, 1)
+        ground_truth_labels = test_labels
+        ground_truth_labels = ground_truth_labels.long()
+        outputs = outputs.double()
+        outputs = torch.tensor(outputs)
 
         # Print accuracy on train set
-        max_probs, predictions = torch.max(outputs, 1)
-        accuracy = sum([1 for i in range(len(predictions)) if predictions[i] == test_labels[i]])/len(outputs)
+        accuracy = np.average(np.equal(np.array(predictions), np.array(test_labels)))
+        loss = self.loss_func(outputs, ground_truth_labels)
         print("accuracy: "+str(accuracy))
-        return outputs
+        print(f'loss: {loss}')
+        return loss, accuracy
 
 
 def main():

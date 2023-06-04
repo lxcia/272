@@ -19,7 +19,7 @@ from local_model import LocalModel
 # Define Flower client
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
-        self.training_data, self.testing_data, self.val_data, self.labels = utils.load_partition(
+        self.training_data, self.val_data, self.testing_data, self.training_labels, self.val_labels, self.testing_labels = utils.load_partition(
             args.partition, args.num_clients, args.data_path, batch_size=args.batch_size
         )
         self.args = args
@@ -42,22 +42,25 @@ class FlowerClient(fl.client.NumPyClient):
         #def train(self, train_data, train_labels, batch_size=32, epochs=10000, learn=0.000001):
         self.net.train(
             self.training_data,
-            self.labels,
+            self.training_labels,
             #batch_size=self.args.batch_size,
             # TODO: CHECK THAT EPOCCHS AND LR ALIGN WITH DEFAULT
             epochs=self.args.local_epochs,
             learn=self.args.lr
         )  # Adjust number of local updates b/t communication rounds
-        return self.get_parameters(config={}), len(self.training_data.dataset), {}
+        return self.get_parameters(config={}), len(self.training_data), {}
 
     def evaluate(self, parameters, config={}):
         # assert self.args.eval_dataset == 'test' or self.args.eval_dataset == 'val'
         dataset = self.testing_data # if self.args.eval_dataset == 'test' else self.val_data
+        testing_labels = self.testing_labels
         self.set_parameters(parameters)
         # (self, test_csv):
-        loss, accuracy = self.net.test(self.net, dataset)
-        print(loss, accuracy)
-        return loss, len(dataset), {"accuracy": accuracy}
+        loss, accuracy = self.net.test(dataset, testing_labels)
+        print("FLANKER")
+        print(loss, len(dataset), accuracy)
+        print("FLANKER")
+        return float(loss), len(dataset), {"accuracy": accuracy}
 
 
 #def run_baseline(args):

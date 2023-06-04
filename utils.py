@@ -12,17 +12,18 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # Create a custom Dataset type for DataLoader
-class MyData(Dataset):
-    def __init__(self, df):
-        self.df = df
-
-    def __len__(self):
-        return self.df.shape[0]
-
-    def __getitem__(self, index):
-        info = torch.from_numpy(self.df[:, :-1])  # Hormonal levels
-        label = torch.from_numpy(self.df[:, -1])  # BC
-        return info, label
+# class MyData(Dataset):
+#     def __init__(self, df):
+#         self.df = df
+#
+#
+#     def __len__(self):
+#         return self.df.shape[0]
+#
+#     def __getitem__(self, index):
+#         info = torch.from_numpy(self.df[:, :-1])  # Hormonal levels
+#         label = torch.from_numpy(self.df[:, -1])  # BC
+#         return info, label
 
 
 def load_data(partition, num_partitions, data_path):
@@ -39,23 +40,27 @@ def load_data(partition, num_partitions, data_path):
     # val_data = numpy.loadtxt(val_data_path, delimiter=',', skiprows=1)
     training_data = pd.read_csv(train_data_path)
     training_data.treatment = training_data.treatment.values - 1
-    #training_data.response_type = training_data.response_type.values - 1
-    training_data = numpy.array(training_data.drop(['response_type'], axis=1).values)
+    training_data.response_type = training_data.response_type.values - 1
+    training_data = training_data.drop(columns=['response_type']).to_numpy()
         
     testing_data = pd.read_csv(test_data_path)
     testing_data.treatment = testing_data.treatment.values - 1
-    #testing_data.response_type = testing_data.response_type.values - 1
-    testing_data = numpy.array(testing_data.drop(['response_type'], axis=1).values)
+    testing_data.response_type = testing_data.response_type.values - 1
+    testing_data = testing_data.drop(columns=['response_type']).to_numpy()
         
     val_data = pd.read_csv(val_data_path)
     val_data.treatment = val_data.treatment.values - 1
-    #val_data.response_type = val_data.response_type.values - 1
-    val_data = numpy.array(val_data.drop(['response_type'], axis=1).values)
+    val_data.response_type = val_data.response_type.values - 1
+    val_data = val_data.drop(columns=['response_type']).to_numpy()
+    print(f'Training data shape: {training_data.shape}')
 
     num_examples = {
         "trainset": len(training_data), "testset": len(testing_data), "valset": len(val_data)
     }
     print("done loading data")
+    #for checking dimensions
+    # print(testing_data.shape, val_data.shape, testing_data.shape)
+    # assert(0==1)
     return training_data, testing_data, val_data, num_examples
 
 
@@ -66,15 +71,16 @@ def load_partition(partition, num_partitions, data_path, batch_size=32):
     n_train = int(num_examples["trainset"])
     print("n_train:", n_train)
 
-    training = torch.tensor(training_data)
-    training = torch.tensor(training_data[:, :-1])
-    testing = torch.tensor(testing_data)
-    val = torch.tensor(val_data)
-    labels = torch.tensor(training_data[:, -1])
-
+    training = torch.tensor(training_data[:, :-1], requires_grad=True)
+    testing = torch.tensor(testing_data[:, :-1], requires_grad=True) #drop last column
+    val = torch.tensor(val_data[:, :-1], requires_grad=True) #drop last column
+    training_labels = torch.tensor(training_data[:, -1])
+    val_labels = torch.tensor(val_data[:, -1])
+    testing_labels = torch.tensor(testing_data[:, -1])
+    print(f'Training data shape after tensorification: {training.shape}')
     print("done load_partition")
 
-    return testing, training, val, labels
+    return training, val, testing, training_labels, val_labels, testing_labels
     # MAYBE FIX ABOVE LABEL GENEARATION LAST RETURN
 
 def get_model_params(model):
