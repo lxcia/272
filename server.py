@@ -92,6 +92,8 @@ def start_server(
     if strategy_name == "FedAvgM":
         print("Setting server momentum for FedAvgM")
         strategy.server_momentum = 0.8 # Set momentum on the server
+        # Instead of always replacing model with new updates, takes a weighted average
+        # of old model and new model updates. this value dictates what the waiting is
 
     # Start Flower server
     fl.server.start_server(
