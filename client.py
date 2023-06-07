@@ -1,16 +1,8 @@
-from copy import deepcopy
-import warnings
-from collections import OrderedDict
 import utils
-
 import flwr as fl
 import torch
-import torch.nn as nn
-from tqdm import tqdm
 import argparse
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
-import numpy as np
 from typing import Tuple, Union, List
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -19,6 +11,14 @@ XY = Tuple[np.ndarray, np.ndarray]
 Dataset = Tuple[XY, XY]
 LogRegParams = Union[XY, Tuple[np.ndarray]]
 XYList = List[XY]
+
+'''
+client.py
+Authored by Sophie, Bowen, Lucia
+This file contains the implementation of the Logistic Regression model run
+at each client. As this file is currently named "client.py" it is the model architecture used
+in the implementation. An alternative architecture can be found in "client_MLP.py"
+'''
 
 # Class authored by Sophie, Lucia, Bowen
 class FlowerClient(fl.client.NumPyClient):
@@ -31,13 +31,16 @@ class FlowerClient(fl.client.NumPyClient):
         self.net = utils.set_initial_params(self.net)
         print("init")
 
+
     def get_parameters(self, config=None): #type: ignore
         return utils.get_model_params(self.net)
+
 
     def fit(self, parameters, config): #, config={}):
         self.net = utils.set_parameters(self.net, parameters)
         self.net.fit(self.training_data, self.training_labels)
         return utils.get_model_params(self.net), len(self.training_data), {}
+
 
     def evaluate(self, parameters, config={}):
         self.net = utils.set_parameters(self.net, parameters)
@@ -45,6 +48,7 @@ class FlowerClient(fl.client.NumPyClient):
         loss = log_loss(self.testing_labels, self.net.predict_proba(self.testing_data))
         print(f"ACC: {accuracy}")
         return loss, len(self.testing_data), {"accuracy": accuracy}
+
 
 # Authored by Lucia
 def main():
@@ -66,7 +70,6 @@ def main():
         required=False,
         help="The number of clients to use",
     )
-
     parser.add_argument(
         "--use_cuda",
         type=bool,
@@ -102,7 +105,6 @@ def main():
         required=False,
         help="Momentum for SGD with momentum",
     )
-    # Arguments that deal exclusively with data
     parser.add_argument(
         "--data-path",
         type=str,

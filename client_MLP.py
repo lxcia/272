@@ -1,23 +1,19 @@
-from copy import deepcopy
-import warnings
-from collections import OrderedDict
 import utils
-
 import flwr as fl
 import torch
-import torch.nn as nn
-from tqdm import tqdm
 import argparse
-#from local_model import LocalModel
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import log_loss
 from sklearn.preprocessing import LabelBinarizer
 import numpy as np
-from typing import Tuple, Union, List
-import numpy as np
-from sklearn.linear_model import LogisticRegression
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+
+'''
+client_MLP.py
+Authored by Sophie, Bowen, Lucia
+This file contains the implementation of 2-layer Multi-Layer Perceptron model run
+at each client. To make this model the architecture used in the implementation, change
+the name to "client.py" An alternative architecture can currently be found in "client.py"
+'''
 
 # Class authored by Sophie, Debugging help from Bowen
 class FlowerClient(fl.client.NumPyClient):
@@ -38,18 +34,22 @@ class FlowerClient(fl.client.NumPyClient):
         self.net.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print("init")
 
+
     def get_parameters(self, config):
         return self.net.get_weights()
+
 
     def fit(self, parameters, config):
         self.net.set_weights(parameters)
         self.net.fit(self.training_data, self.training_labels, epochs=25, batch_size=32, steps_per_epoch=8)
         return self.net.get_weights(), len(self.training_data), {}
 
+
     def evaluate(self, parameters, config):
         self.net.set_weights(parameters)
         loss, accuracy = self.net.evaluate(self.testing_data, self.testing_labels)
         return loss, len(self.testing_data), {"accuracy": float(accuracy)}
+
 
 # Authored by Lucia
 def main():
@@ -71,7 +71,6 @@ def main():
         required=False,
         help="The number of clients to use",
     )
-
     parser.add_argument(
         "--use_cuda",
         type=bool,
@@ -107,7 +106,6 @@ def main():
         required=False,
         help="Momentum for SGD with momentum",
     )
-    # Arguments that deal exclusively with data
     parser.add_argument(
         "--data-path",
         type=str,

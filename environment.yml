@@ -1,8 +1,9 @@
-name: pricomp
+name: cs272
 channels:
   - pytorch
   - conda-forge
   - defaults
+  - scikit-learn
 dependencies:
   - amqp=5.1.1
   - backports=1.0
@@ -66,4 +67,3 @@ dependencies:
     - iterators==0.0.2
     - numpy==1.23.2
     - protobuf==3.20.1
-prefix: /Users/nikhil/opt/miniconda3/envs/pricomp
