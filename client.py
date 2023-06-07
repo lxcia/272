@@ -49,12 +49,7 @@ class FlowerClient(fl.client.NumPyClient):
 def main():
     # Parse command line argument `partition`
     parser = argparse.ArgumentParser(description="Flower")
-    parser.add_argument(
-        "--baseline",
-        action='store_true',
-        help="Whether to run a baseline experiment where a single client \
-        trains on the entire dataset (i.e., a non-federated approach)"
-    )
+
     parser.add_argument(
         "--partition",
         type=int,
@@ -70,14 +65,7 @@ def main():
         required=False,
         help="The number of clients to use",
     )
-    parser.add_argument(
-        "--toy",
-        type=bool,
-        default=False,
-        required=False,
-        help="Set to true to quicky run the client using only 10 datasamples. \
-        Useful for testing purposes. Default: False",
-    )
+
     parser.add_argument(
         "--use_cuda",
         type=bool,
@@ -95,7 +83,7 @@ def main():
     parser.add_argument(
         "-lr",
         type=float,
-        default=0.0008, #change back to 0.0008
+        default=0.0008,
         required=False,
         help="Learning rate",
     )

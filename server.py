@@ -7,12 +7,20 @@ import warnings
 import torch
 import numpy as np
 from flwr.common import parameters_to_ndarrays
-from typing import List, Tuple
 
-from client import FlowerClient
 
 warnings.filterwarnings("ignore", category=UserWarning)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+# Use when dataset sizes differ between clients
+def weighted_average(metrics):
+    # Multiply accuracy of each client by number of examples used
+    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
+    examples = [num_examples for num_examples, _ in metrics]
+
+    # Aggregate and return custom metric (weighted average)
+    return {"accuracy": sum(accuracies) / sum(examples)}
 
 STRATEGY_FUNCS = {
     "FedAvg": fl.server.strategy.FedAvg,
@@ -23,9 +31,9 @@ STRATEGY_FUNCS = {
     "FedProx": fl.server.strategy.FedAvg,
 }
 
-# AGG_FUNCS = {
-#     "weighted": weighted_average,
-# }
+AGG_FUNCS = {
+    "weighted": weighted_average,
+}
 
 def get_save_model_strategy(base_strategy, name):
     """
@@ -43,7 +51,7 @@ def get_save_model_strategy(base_strategy, name):
 
             if aggregated_parameters is not None:
                 # Convert `Parameters` to `List[np.ndarray]`
-                # aggregated_ndarrays = fl.common.parameters_to_ndarrays(aggregated_parameters)
+                aggregated_ndarrays = fl.common.parameters_to_ndarrays(aggregated_parameters)
 
                 os.makedirs("checkpoints/", exist_ok=True)
                 # Save aggregated_ndarrays
@@ -54,7 +62,6 @@ def get_save_model_strategy(base_strategy, name):
 
     return SaveModelStrategy
 
-
 def start_server(
     strategy_func,
     strategy_name,
@@ -64,18 +71,20 @@ def start_server(
     num_rounds=8,
     name="no_name"
 ):
+    strategy = get_save_model_strategy(strategy_func, name)(
+        evaluate_metrics_aggregation_fn=agg_func,
+        min_available_clients=min_available_clients,
+        fraction_fit=fraction_fit,   # Fraction of clients which should participate in each round
+    )
 
-
-    # if strategy_name == "FedAvgM":
-    #     print("Setting server momentum for FedAvgM")
-    #     strategy.server_momentum = 0.8 # Set momentum on the server
-    #     # Instead of always replacing model with new updates, takes a weighted average
-    #     # of old model and new model updates. this value dictates what the waiting is
+    if strategy_name == "FedAvgM":
+        print("Setting server momentum for FedAvgM")
+        strategy.server_momentum = 0.8 # Set momentum on the server
 
     # Start Flower server
     fl.server.start_server(
         config=fl.server.ServerConfig(num_rounds=num_rounds),
-        strategy=fl.server.strategy.QFedAvg(0.2)
+        strategy=strategy,
     )
 
 def main():
@@ -125,26 +134,18 @@ def main():
         help="Name for the run; used only for saving off checkpoints"
     )
 
-    parser.add_argument(
-        "--data",
-        type=str,
-        required=False,
-        default="no_data",
-        help="Folder with data"
-    )
-
     args = parser.parse_args()
 
     if args.strategy not in STRATEGY_FUNCS:
         raise NotImplementedError(f"Attempted to use a non-existent strategy f{args.strategy}")
 
-    # if args.agg not in AGG_FUNCS:
-    #     raise NotImplementedError(f"Attempted to use a non-existent agg f{args.agg}")
+    if args.agg not in AGG_FUNCS:
+        raise NotImplementedError(f"Attempted to use a non-existent agg f{args.agg}")
 
     start_server(
         STRATEGY_FUNCS[args.strategy],
         args.strategy,
-        #AGG_FUNCS[args.agg],
+        AGG_FUNCS[args.agg],
         args.min_available_clients,
         args.fraction_fit,
         args.num_rounds,
