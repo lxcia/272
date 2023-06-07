@@ -34,7 +34,7 @@ class FlowerClient(fl.client.NumPyClient):
             self.training_labels, self.testing_labels = \
             utils.load_partition(args.partition, args.num_clients, args.data_path, batch_size=args.batch_size)
         self.args = args
-        self.net = LogisticRegression(warm_start=True)#.fit(np.random.uniform(size=(10,13)), np.arange(10))
+        self.net = LogisticRegression(warm_start=True) #.fit(np.random.uniform(size=(10,13)), np.arange(10))
         self.net = utils.set_initial_params(self.net)
         print("init")
 

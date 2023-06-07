@@ -7,31 +7,32 @@ import warnings
 import torch
 import numpy as np
 from flwr.common import parameters_to_ndarrays
+from typing import List, Tuple
 
-from local_model_shit import LocalModel
+from client import FlowerClient
 
 warnings.filterwarnings("ignore", category=UserWarning)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # Use when dataset sizes differ between clients
-def weighted_average(metrics):
-    # Multiply accuracy of each client by number of examples used
-    accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
-    examples = [num_examples for num_examples, _ in metrics]
+# def weighted_average(metrics):
+#     # Multiply accuracy of each client by number of examples used
+#     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
+#     examples = [num_examples for num_examples, _ in metrics]
+#
+#     # Aggregate and return custom metric (weighted average)
+#     return {"accuracy": sum(accuracies) / sum(examples)}
 
-    # Aggregate and return custom metric (weighted average)
-    return {"accuracy": sum(accuracies) / sum(examples)}
-
-class FedAdamWrapper(fl.server.strategy.FedAdam):
-    """
-    The flwr library for some reason requires an initial_parameters argument
-    just for FedOpt and related methods, so we pass this in.
-    """
-    def __init__(self, **kwargs):
-        parameters = [param.detach() for param in list(Net().parameters())]
-        parameters = fl.common.ndarrays_to_parameters(parameters)
-        super().__init__(initial_parameters=parameters, **kwargs)
+# class FedAdamWrapper(fl.server.strategy.FedAdam):
+#     """
+#     The flwr library for some reason requires an initial_parameters argument
+#     just for FedOpt and related methods, so we pass this in.
+#     """
+#     def __init__(self, **kwargs):
+#         parameters = [torch.tensor(param) for param in FlowerClient.get_parameters(self)]
+#         parameters = fl.common.ndarrays_to_parameters(parameters)
+#         super().__init__(initial_parameters=parameters, **kwargs)
 
 STRATEGY_FUNCS = {
     "FedAvg": fl.server.strategy.FedAvg,
@@ -40,12 +41,15 @@ STRATEGY_FUNCS = {
     # as FedAvg and FedProx are the same on the server side
     # as long as there are no failures.
     "FedProx": fl.server.strategy.FedAvg,
-    "FedAdam": FedAdamWrapper,
+    "FedAdaGrad": fl.server.strategy.FedAdagrad,
+    "QFedAvg": fl.server.strategy.QFedAvg,
+    "FedYogi": fl.server.strategy.FedYogi,
+    #"FedAdam": FedAdamWrapper,
 }
 
-AGG_FUNCS = {
-    "weighted": weighted_average,
-}
+# AGG_FUNCS = {
+#     "weighted": weighted_average,
+# }
 
 def get_save_model_strategy(base_strategy, name):
     """
@@ -63,7 +67,7 @@ def get_save_model_strategy(base_strategy, name):
 
             if aggregated_parameters is not None:
                 # Convert `Parameters` to `List[np.ndarray]`
-                aggregated_ndarrays = fl.common.parameters_to_ndarrays(aggregated_parameters)
+                # aggregated_ndarrays = fl.common.parameters_to_ndarrays(aggregated_parameters)
 
                 os.makedirs("checkpoints/", exist_ok=True)
                 # Save aggregated_ndarrays
@@ -74,6 +78,21 @@ def get_save_model_strategy(base_strategy, name):
 
     return SaveModelStrategy
 
+# def initialize_model(dimensions: Tuple[int, int], tensor_type: str) -> List[bytes]:
+#     # Get the dimensions
+#     rows, cols = dimensions
+#
+#     # Create an empty list to store the tensors
+#     tensors = []
+#
+#     # Convert each value to bytes and add to the tensors list
+#     for _ in range(rows):
+#         tensor = b'\x00' * cols
+#         tensors.append(tensor)
+#
+#     return tensors
+
+
 def start_server(
     strategy_func,
     strategy_name,
@@ -83,22 +102,27 @@ def start_server(
     num_rounds=8,
     name="no_name"
 ):
-    strategy = get_save_model_strategy(strategy_func, name)(
-        evaluate_metrics_aggregation_fn=agg_func,
-        min_available_clients=min_available_clients,
-        fraction_fit=fraction_fit,   # Fraction of clients which should participate in each round
-    )
 
-    if strategy_name == "FedAvgM":
-        print("Setting server momentum for FedAvgM")
-        strategy.server_momentum = 0.8 # Set momentum on the server
-        # Instead of always replacing model with new updates, takes a weighted average
-        # of old model and new model updates. this value dictates what the waiting is
+    # # initial_parameters_1 = initialize_model((10, 13), "str")
+    # # initial_parameters_2 = initialize_model((10,1), "str")
+    # #strategy = get_save_model_strategy(strategy_func, name)(
+    #     evaluate_metrics_aggregation_fn=agg_func,
+    #     min_available_clients=min_available_clients,
+    #     fraction_fit=fraction_fit,
+    #     #initial_parameters=[torch.tensor(np.zeros((10, 13))), torch.tensor(np.zeros(10,))]# Fraction of clients which should participate in each round
+    #     #initial_parameters= [initial_parameters_1, initial_parameters_2]
+    # )
+
+    # if strategy_name == "FedAvgM":
+    #     print("Setting server momentum for FedAvgM")
+    #     strategy.server_momentum = 0.8 # Set momentum on the server
+    #     # Instead of always replacing model with new updates, takes a weighted average
+    #     # of old model and new model updates. this value dictates what the waiting is
 
     # Start Flower server
     fl.server.start_server(
         config=fl.server.ServerConfig(num_rounds=num_rounds),
-        strategy=strategy,
+        strategy=fl.server.strategy.QFedAvg(0.2)
     )
 
 def main():
@@ -147,8 +171,7 @@ def main():
         default="no_name",
         help="Name for the run; used only for saving off checkpoints"
     )
-    # --data -> file1
-    # datasets/file1.csv
+
     parser.add_argument(
         "--data",
         type=str,
@@ -162,13 +185,13 @@ def main():
     if args.strategy not in STRATEGY_FUNCS:
         raise NotImplementedError(f"Attempted to use a non-existent strategy f{args.strategy}")
 
-    if args.agg not in AGG_FUNCS:
-        raise NotImplementedError(f"Attempted to use a non-existent agg f{args.agg}")
+    # if args.agg not in AGG_FUNCS:
+    #     raise NotImplementedError(f"Attempted to use a non-existent agg f{args.agg}")
 
     start_server(
         STRATEGY_FUNCS[args.strategy],
         args.strategy,
-        AGG_FUNCS[args.agg],
+        #AGG_FUNCS[args.agg],
         args.min_available_clients,
         args.fraction_fit,
         args.num_rounds,
