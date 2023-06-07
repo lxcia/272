@@ -14,26 +14,6 @@ from client import FlowerClient
 warnings.filterwarnings("ignore", category=UserWarning)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
-# Use when dataset sizes differ between clients
-# def weighted_average(metrics):
-#     # Multiply accuracy of each client by number of examples used
-#     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
-#     examples = [num_examples for num_examples, _ in metrics]
-#
-#     # Aggregate and return custom metric (weighted average)
-#     return {"accuracy": sum(accuracies) / sum(examples)}
-
-# class FedAdamWrapper(fl.server.strategy.FedAdam):
-#     """
-#     The flwr library for some reason requires an initial_parameters argument
-#     just for FedOpt and related methods, so we pass this in.
-#     """
-#     def __init__(self, **kwargs):
-#         parameters = [torch.tensor(param) for param in FlowerClient.get_parameters(self)]
-#         parameters = fl.common.ndarrays_to_parameters(parameters)
-#         super().__init__(initial_parameters=parameters, **kwargs)
-
 STRATEGY_FUNCS = {
     "FedAvg": fl.server.strategy.FedAvg,
     "FedAvgM": fl.server.strategy.FedAvgM,
@@ -41,10 +21,6 @@ STRATEGY_FUNCS = {
     # as FedAvg and FedProx are the same on the server side
     # as long as there are no failures.
     "FedProx": fl.server.strategy.FedAvg,
-    "FedAdaGrad": fl.server.strategy.FedAdagrad,
-    "QFedAvg": fl.server.strategy.QFedAvg,
-    "FedYogi": fl.server.strategy.FedYogi,
-    #"FedAdam": FedAdamWrapper,
 }
 
 # AGG_FUNCS = {
@@ -78,20 +54,6 @@ def get_save_model_strategy(base_strategy, name):
 
     return SaveModelStrategy
 
-# def initialize_model(dimensions: Tuple[int, int], tensor_type: str) -> List[bytes]:
-#     # Get the dimensions
-#     rows, cols = dimensions
-#
-#     # Create an empty list to store the tensors
-#     tensors = []
-#
-#     # Convert each value to bytes and add to the tensors list
-#     for _ in range(rows):
-#         tensor = b'\x00' * cols
-#         tensors.append(tensor)
-#
-#     return tensors
-
 
 def start_server(
     strategy_func,
@@ -103,15 +65,6 @@ def start_server(
     name="no_name"
 ):
 
-    # # initial_parameters_1 = initialize_model((10, 13), "str")
-    # # initial_parameters_2 = initialize_model((10,1), "str")
-    # #strategy = get_save_model_strategy(strategy_func, name)(
-    #     evaluate_metrics_aggregation_fn=agg_func,
-    #     min_available_clients=min_available_clients,
-    #     fraction_fit=fraction_fit,
-    #     #initial_parameters=[torch.tensor(np.zeros((10, 13))), torch.tensor(np.zeros(10,))]# Fraction of clients which should participate in each round
-    #     #initial_parameters= [initial_parameters_1, initial_parameters_2]
-    # )
 
     # if strategy_name == "FedAvgM":
     #     print("Setting server momentum for FedAvgM")

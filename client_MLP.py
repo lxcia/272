@@ -19,18 +19,7 @@ from sklearn.linear_model import LogisticRegression
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 
-# XY = Tuple[np.ndarray, np.ndarray]
-# Dataset = Tuple[XY, XY]
-# LogRegParams = Union[XY, Tuple[np.ndarray]]
-# XYList = List[XY]
 
-
-# #############################################################################
-# 2. Federation of the pipeline with Flower
-# #############################################################################
-
-
-# Define Flower client
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
         self.training_data, self.testing_data, \
@@ -161,11 +150,6 @@ def main():
     device = torch.device(
         "cuda:0" if torch.cuda.is_available() and args.use_cuda else "cpu"
     )
-
-    #if args.baseline:
-        #run_baseline(args)
-    #else:
-    # REMOVED BASELINE CASE (commented above)
 
     client = FlowerClient(args)
     fl.client.start_numpy_client(server_address="localhost:8080", client=client)

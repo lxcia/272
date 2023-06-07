@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 import argparse
-#from local_model import LocalModel
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
 import numpy as np
@@ -21,12 +20,6 @@ Dataset = Tuple[XY, XY]
 LogRegParams = Union[XY, Tuple[np.ndarray]]
 XYList = List[XY]
 
-
-# #############################################################################
-# 2. Federation of the pipeline with Flower
-# #############################################################################
-
-
 # Define Flower client
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
@@ -34,7 +27,7 @@ class FlowerClient(fl.client.NumPyClient):
             self.training_labels, self.testing_labels = \
             utils.load_partition(args.partition, args.num_clients, args.data_path, batch_size=args.batch_size)
         self.args = args
-        self.net = LogisticRegression(warm_start=True) #.fit(np.random.uniform(size=(10,13)), np.arange(10))
+        self.net = LogisticRegression(warm_start=True)
         self.net = utils.set_initial_params(self.net)
         print("init")
 
@@ -44,53 +37,14 @@ class FlowerClient(fl.client.NumPyClient):
     def fit(self, parameters, config): #, config={}):
         self.net = utils.set_parameters(self.net, parameters)
         self.net.fit(self.training_data, self.training_labels)
-        # print("yeehaw")
-        #print(utils.get_model_params(self.net).dtype)
         return utils.get_model_params(self.net), len(self.training_data), {}
-        #def train(self, train_data, train_labels, batch_size=32, epochs=10000, learn=0.000001):
-        #self.net.train(
-            #self.training_data,
-            #self.training_labels,
-            #epochs=10000,
-            #learn=0.000001
-        #)  # Adjust number of local updates b/t communication rounds
-        #return self.get_parameters(config={}), len(self.training_data), {}
-        #return self.net.coef_
-
-
 
     def evaluate(self, parameters, config={}):
-        # assert self.args.eval_dataset == 'test' or self.args.eval_dataset == 'val'
-         # if self.args.eval_dataset == 'test' else self.val_data
         self.net = utils.set_parameters(self.net, parameters)
         accuracy = self.net.score(self.testing_data, self.testing_labels)
-        # print("here")
         loss = log_loss(self.testing_labels, self.net.predict_proba(self.testing_data))
-        # print("LOSS DTYPE")
-        # print(loss.dtype)
-        # print("MIDDLE")
-        # print(len(self.testing_data))
         print(f"ACC: {accuracy}")
-        # print(accuracy.dtype)
-
         return loss, len(self.testing_data), {"accuracy": accuracy}
-
-
-#def run_baseline(args):
-    #training_data, testing_data = utils.load_partition(
-        #0, 1, args.data_path, batch_size=args.batch_size
-    #)
-
-    #net = Net()
-    #train(
-        #net,
-        #training_data,
-        #epochs=args.local_epochs,
-        #testloader=testing_data, # Evaluates performance every local epoch
-    #)
-    #loss, accuracy = test(net, testing_data)
-    #print(f"Loss: {loss}, Accuracy: {accuracy}")
-
 
 def main():
     # Parse command line argument `partition`
@@ -191,14 +145,8 @@ def main():
         "cuda:0" if torch.cuda.is_available() and args.use_cuda else "cpu"
     )
 
-    #if args.baseline:
-        #run_baseline(args)
-    #else:
-    # REMOVED BASELINE CASE (commented above)
-
     client = FlowerClient(args)
     fl.client.start_numpy_client(server_address="0.0.0.0:8080", client=client)
-    #fl.client.start_numpy_client(server_address="localhost:8080", client=client)
 
 
 if __name__ == "__main__":
