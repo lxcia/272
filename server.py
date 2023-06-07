@@ -1,25 +1,31 @@
 import argparse
 import os
-
 import flwr as fl
-import utils
 import warnings
 import torch
 import numpy as np
 from flwr.common import parameters_to_ndarrays
 
-
 warnings.filterwarnings("ignore", category=UserWarning)
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+'''
+server.py
+Authored by Lucia
+This file contains functions that implement three different federated learning strategies,
+FedAvg, FedAvgM, and FedProx, and also sets up a global server in the Flower framework.
+FedAvg: https://arxiv.org/abs/1602.05629
+FedAvgM: https://arxiv.org/pdf/1909.06335.pdf
+FedProx: https://arxiv.org/abs/1812.06127
+'''
 
-# Use when dataset sizes differ between clients
 def weighted_average(metrics):
-    # Multiply accuracy of each client by number of examples used
+    '''
+    A weighted average is used when dataset sizes differ between clients. We multiply
+    accuracy of each client by number of examples used, aggregate and return custom metric.
+    '''
     accuracies = [num_examples * m["accuracy"] for num_examples, m in metrics]
     examples = [num_examples for num_examples, _ in metrics]
-
-    # Aggregate and return custom metric (weighted average)
     return {"accuracy": sum(accuracies) / sum(examples)}
 
 STRATEGY_FUNCS = {
@@ -38,6 +44,7 @@ AGG_FUNCS = {
 def get_save_model_strategy(base_strategy, name):
     """
     Wraps the provided base strategy in code to save off checkpoints at each round.
+    These checkpoints are saved into the "checkpoints" directory which is rewritten after each run.
     """
     class SaveModelStrategy(base_strategy):
         def aggregate_fit(
@@ -59,8 +66,8 @@ def get_save_model_strategy(base_strategy, name):
                 np.savez(f"checkpoints/{name}-round-{server_round}-weights.npz", *aggregated_ndarrays)
 
             return aggregated_parameters, aggregated_metrics
-
     return SaveModelStrategy
+
 
 def start_server(
     strategy_func,
@@ -81,11 +88,11 @@ def start_server(
         print("Setting server momentum for FedAvgM")
         strategy.server_momentum = 0.8 # Set momentum on the server
 
-    # Start Flower server
     fl.server.start_server(
         config=fl.server.ServerConfig(num_rounds=num_rounds),
         strategy=strategy,
     )
+
 
 def main():
     parser = argparse.ArgumentParser(description="Flower server")
