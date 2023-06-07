@@ -18,7 +18,7 @@ XYList = List[XY]
 warnings.filterwarnings("ignore")
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
+# Authored by Sophie
 def load_data(partition, num_partitions, data_path):
     train_data_path = os.path.join(data_path, "train.csv")
     test_data_path = os.path.join(data_path, "test.csv")
@@ -36,7 +36,7 @@ def load_data(partition, num_partitions, data_path):
     }
     return training_data, testing_data, num_examples
 
-
+# Authored by Lucia
 def load_partition(partition, num_partitions, data_path, batch_size=32):
     training_data, testing_data, num_examples = load_data(partition, num_partitions, data_path)
     n_train = int(num_examples["trainset"])
@@ -48,7 +48,7 @@ def load_partition(partition, num_partitions, data_path, batch_size=32):
     testing_labels = testing_data[:, -1]
     return training, testing, training_labels, testing_labels
 
-
+# Authored by Bowen, Lucia, Sophie
 def get_model_params(model : LogisticRegression) -> LogRegParams:
     """Returns the paramters of a sklearn LogisticRegression model"""
     if model.fit_intercept:
@@ -57,7 +57,7 @@ def get_model_params(model : LogisticRegression) -> LogRegParams:
         params = [model.coef_,]
     return params
 
-
+# Authored by Bowen, Lucia, Sophie
 def set_initial_params(model : LogisticRegression):
     """
     Sets initial parameters as zeros
@@ -71,7 +71,7 @@ def set_initial_params(model : LogisticRegression):
         model.intercept_ = np.zeros((n_classes,))
     return model
 
-
+# Authored by Bowen, Lucia, Sophie
 def set_parameters(model : LogisticRegression, parameters: LogRegParams):
     model.coef_ = parameters[0]
     if model.fit_intercept:

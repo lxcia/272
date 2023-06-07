@@ -19,7 +19,7 @@ from sklearn.linear_model import LogisticRegression
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 
-
+# Class authored by Sophie, Debugging help from Bowen
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
         self.training_data, self.testing_data, \
@@ -51,7 +51,7 @@ class FlowerClient(fl.client.NumPyClient):
         loss, accuracy = self.net.evaluate(self.testing_data, self.testing_labels)
         return loss, len(self.testing_data), {"accuracy": float(accuracy)}
 
-
+# Authored by Lucia
 def main():
     # Parse command line argument `partition`
     parser = argparse.ArgumentParser(description="Flower")

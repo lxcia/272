@@ -20,7 +20,7 @@ Dataset = Tuple[XY, XY]
 LogRegParams = Union[XY, Tuple[np.ndarray]]
 XYList = List[XY]
 
-# Define Flower client
+# Class authored by Sophie, Lucia, Bowen
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
         self.training_data, self.testing_data, \
@@ -46,6 +46,7 @@ class FlowerClient(fl.client.NumPyClient):
         print(f"ACC: {accuracy}")
         return loss, len(self.testing_data), {"accuracy": accuracy}
 
+# Authored by Lucia
 def main():
     # Parse command line argument `partition`
     parser = argparse.ArgumentParser(description="Flower")
