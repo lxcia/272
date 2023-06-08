@@ -16,6 +16,8 @@ utils.py
 Authored by Bowen, Sophie, Lucia
 This file contains functions to load and process training and test 
 data from CSVs, get and set model parameters.
+
+Code written using flwr sci-kit learn quickstart guide https://flower.dev/docs/quickstart-scikitlearn.html
 '''
 
 warnings.filterwarnings("ignore")

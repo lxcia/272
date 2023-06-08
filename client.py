@@ -21,6 +21,7 @@ in the implementation. An alternative architecture can be found in "client_MLP.p
 '''
 
 # Class authored by Sophie, Lucia, Bowen
+# Code written based on FLWR scikit-learn quickstart guide https://flower.dev/docs/quickstart-scikitlearn.html
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
         self.training_data, self.testing_data, \

@@ -16,6 +16,7 @@ the name to "client.py" An alternative architecture can currently be found in "c
 '''
 
 # Class authored by Sophie, Debugging help from Bowen
+# Code written based on FLWR tensorflow quickstart guide https://flower.dev/docs/quickstart-tensorflow.html
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, args):
         self.training_data, self.testing_data, \
