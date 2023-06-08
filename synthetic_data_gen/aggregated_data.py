@@ -36,10 +36,12 @@ dump(clf, "logreg_baseline.joblib")
 # Analyzer performance on held out test data
 with open("independent_log_reg.txt",'w') as f:
     for i in range(15,25):
+        # Read in test clinic data
         file_name_test = "final_data/"+str("clinic_")+str(i)+".csv"
         df_test = pd.read_csv(file_name_test)
         y_test = df_test['treatment'].values
         X_test = df_test.drop(['treatment','response_type'], axis=1).values
+        # Predict on test set
         preds = clf.predict_proba(X_test)
         # Save predictions on each test set
         np.save("clinic_"+str(i)+"_preds.npy",preds)

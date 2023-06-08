@@ -74,7 +74,7 @@ def get_model_params(model : LogisticRegression) -> LogRegParams:
 # Authored by Bowen, Lucia, Sophie
 def set_initial_params(model : LogisticRegression):
     '''
-    Sets initial parameters as zeros
+    Sets initial model parameters as zeros
     '''
     n_classes = 10
     n_features = 13
@@ -89,7 +89,7 @@ def set_initial_params(model : LogisticRegression):
 # Authored by Bowen, Lucia, Sophie
 def set_parameters(model : LogisticRegression, parameters: LogRegParams):
     '''
-    #TODO
+    # Updates model coefficients and intercept
     '''
     model.coef_ = parameters[0]
     if model.fit_intercept:
