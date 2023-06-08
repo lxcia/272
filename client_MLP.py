@@ -28,6 +28,8 @@ class FlowerClient(fl.client.NumPyClient):
         self.testing_labels = self.label_binarizer.transform(self.testing_labels)
 
         self.args = args
+
+        # Set up the model architicture
         self.net = Sequential()
         self.net.add(Dense(64, input_shape=(13,), activation='relu'))
         self.net.add(Dense(64, activation='relu'))
@@ -35,17 +37,17 @@ class FlowerClient(fl.client.NumPyClient):
         self.net.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         print("init")
 
-
+    # Returns the model weights
     def get_parameters(self, config):
         return self.net.get_weights()
 
-
+    # Fits model on current training data
     def fit(self, parameters, config):
         self.net.set_weights(parameters)
         self.net.fit(self.training_data, self.training_labels, epochs=25, batch_size=32, steps_per_epoch=8)
         return self.net.get_weights(), len(self.training_data), {}
 
-
+    # Evaluates performance on validation set
     def evaluate(self, parameters, config):
         self.net.set_weights(parameters)
         loss, accuracy = self.net.evaluate(self.testing_data, self.testing_labels)
